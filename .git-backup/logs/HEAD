@@ -1,0 +1,6 @@
+0000000000000000000000000000000000000000 b8c3281a83909860bd3011f18a6bb9b814ff6ad0 Thanh Tung <thanhtungg28686@gmail.com> 1789573754 +0700	commit (initial): phase1 và phase 2
+b8c3281a83909860bd3011f18a6bb9b814ff6ad0 57ce4b7ff90ccad1689549ac9a80895acd854af3 Thanh Tung <thanhtungg28686@gmail.com> 1789576064 +0700	commit: n1phase3
+57ce4b7ff90ccad1689549ac9a80895acd854af3 7d6c5d64a8e98dba8e0c72ebf54479a0a33e3cac Thanh Tung <thanhtungg28686@gmail.com> 1789576885 +0700	commit: feat: complete smart community backend
+7d6c5d64a8e98dba8e0c72ebf54479a0a33e3cac a13c37f0216533c23fd1a403c514518209e624e7 Thanh Tung <thanhtungg28686@gmail.com> 1789578473 +0700	commit: frontend
+a13c37f0216533c23fd1a403c514518209e624e7 7712977f56d96464e5fb4e77a2b2e8b192966802 Thanh Tung <thanhtungg28686@gmail.com> 1789579774 +0700	commit: check
+7712977f56d96464e5fb4e77a2b2e8b192966802 7e6a896cb39adf56e2821e46de3426dbefd8cb6c Thanh Tung <thanhtungg28686@gmail.com> 1789626028 +0700	commit: chore: isolate test database and reset demo baseline
