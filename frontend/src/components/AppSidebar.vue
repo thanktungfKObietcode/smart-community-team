@@ -5,7 +5,7 @@ import { useRoute } from 'vue-router'
 const props = defineProps({ items: { type: Array, default: () => [] }, mobileOpen: Boolean, portal: String })
 const emit = defineEmits(['update:mobileOpen'])
 const route = useRoute()
-const isActive = (item) => route.path.startsWith(item.to)
+const isActive = (item) => route.path.startsWith(item.to.split('?')[0])
 </script>
 
 <template>
