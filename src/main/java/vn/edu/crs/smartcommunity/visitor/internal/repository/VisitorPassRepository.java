@@ -11,6 +11,8 @@ public interface VisitorPassRepository extends JpaRepository<VisitorPass, Long> 
 
     List<VisitorPass> findByResidentIdOrderByValidFromDesc(Long residentId);
 
+    List<VisitorPass> findAllByOrderByCreatedAtDesc();
+
     Optional<VisitorPass> findByIdAndResidentId(Long id, Long residentId);
 
     Optional<VisitorPass> findByCodeIgnoreCase(String code);

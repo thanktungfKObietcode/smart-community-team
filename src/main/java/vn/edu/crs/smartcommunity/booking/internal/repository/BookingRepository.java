@@ -24,6 +24,9 @@ public interface BookingRepository extends JpaRepository<Booking, Long> {
 
     List<Booking> findByStatusAndFacilityIdOrderByStartTimeDesc(BookingStatus status, Long facilityId);
 
+    List<Booking> findByFacilityIdAndStatusAndStartTimeGreaterThanEqualAndStartTimeLessThanOrderByStartTimeAsc(
+            Long facilityId, BookingStatus status, java.time.LocalDateTime dayStart, java.time.LocalDateTime nextDayStart);
+
     boolean existsByFacilityIdAndStatusAndStartTimeLessThanAndEndTimeGreaterThan(
             Long facilityId, BookingStatus status, java.time.LocalDateTime endTime,
             java.time.LocalDateTime startTime);

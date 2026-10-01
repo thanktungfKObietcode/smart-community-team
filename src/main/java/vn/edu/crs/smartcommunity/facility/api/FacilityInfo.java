@@ -7,6 +7,8 @@ public record FacilityInfo(
         String code,
         String name,
         Long buildingId,
+        String location,
+        Integer capacity,
         FacilityStatus status,
         boolean bookable,
         LocalTime openingTime,

@@ -59,6 +59,10 @@ public class FacilityService {
         facility.setName(request.name().trim());
         facility.setDescription(normalizeOptional(request.description()));
         facility.setBuildingId(request.buildingId());
+        facility.setLocation(normalizeOptional(request.location()));
+        facility.setCapacity(validateCapacity(request.capacity()));
+        facility.setCoverImageUrl(normalizeOptional(request.coverImageUrl()));
+        facility.setGalleryImageUrls(normalizeImageUrls(request.galleryImageUrls()));
         facility.setType(request.type());
         facility.setStatus(FacilityStatus.AVAILABLE);
         facility.setBookable(request.bookable() == null || request.bookable());
@@ -79,6 +83,10 @@ public class FacilityService {
             validateBuilding(request.buildingId());
             facility.setBuildingId(request.buildingId());
         }
+        if (request.location() != null) facility.setLocation(normalizeOptional(request.location()));
+        if (request.capacity() != null) facility.setCapacity(validateCapacity(request.capacity()));
+        if (request.coverImageUrl() != null) facility.setCoverImageUrl(normalizeOptional(request.coverImageUrl()));
+        if (request.galleryImageUrls() != null) facility.setGalleryImageUrls(normalizeImageUrls(request.galleryImageUrls()));
         if (request.type() != null) facility.setType(request.type());
         if (request.status() != null) facility.setStatus(request.status());
         if (request.bookable() != null) facility.setBookable(request.bookable());
@@ -126,15 +134,29 @@ public class FacilityService {
         return value == null || value.isBlank() ? null : value.trim();
     }
 
+    private Integer validateCapacity(Integer capacity) {
+        if (capacity != null && capacity < 1) {
+            throw new BadRequestException("Facility capacity must be at least 1");
+        }
+        return capacity;
+    }
+
+    private List<String> normalizeImageUrls(List<String> imageUrls) {
+        if (imageUrls == null) return new java.util.ArrayList<>();
+        return imageUrls.stream().map(this::normalizeOptional).filter(java.util.Objects::nonNull).distinct().toList();
+    }
+
     private FacilityInfo toInfo(Facility facility) {
         return new FacilityInfo(facility.getId(), facility.getCode(), facility.getName(), facility.getBuildingId(),
+                facility.getLocation(), facility.getCapacity(),
                 facility.getStatus(), facility.isBookable(), facility.getOpeningTime(),
                 facility.getClosingTime(), facility.isActive());
     }
 
     private FacilityResponse toResponse(Facility facility) {
         return new FacilityResponse(facility.getId(), facility.getCode(), facility.getName(), facility.getDescription(),
-                facility.getBuildingId(), facility.getType(), facility.getStatus(), facility.isBookable(),
+                facility.getBuildingId(), facility.getLocation(), facility.getCapacity(), facility.getCoverImageUrl(),
+                List.copyOf(facility.getGalleryImageUrls()), facility.getType(), facility.getStatus(), facility.isBookable(),
                 facility.getOpeningTime(), facility.getClosingTime(), facility.isActive(), facility.getCreatedAt(),
                 facility.getUpdatedAt());
     }

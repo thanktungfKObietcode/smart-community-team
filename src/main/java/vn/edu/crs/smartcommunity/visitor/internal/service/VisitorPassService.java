@@ -87,6 +87,11 @@ public class VisitorPassService {
     }
 
     @Transactional
+    public List<VisitorPassResponse> listManagement() {
+        return visitorPassRepository.findAllByOrderByCreatedAtDesc().stream().map(this::expireAndMap).toList();
+    }
+
+    @Transactional
     public VisitorPassResponse getMine(Long id, Long userId) {
         ResidentInfo resident = residentLookup.getByUserId(userId)
                 .orElseThrow(() -> new NotFoundException("Resident profile not found"));
