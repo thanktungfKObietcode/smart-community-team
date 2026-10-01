@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -12,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -205,6 +207,86 @@ class IdentityAuthenticationIntegrationTests {
         }
     }
 
+    @Test
+    void adminCanCreateManagerTechnicianAndSecurityAccounts() throws Exception {
+        String adminToken = loginToken("admin@test.com", DEVELOPMENT_PASSWORD);
+
+        createStaffAccount(adminToken, "Manager", "MANAGER")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.roles[0]").value("MANAGER"))
+                .andExpect(jsonPath("$.password").doesNotExist());
+        createStaffAccount(adminToken, "Technician", "TECHNICIAN")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.roles[0]").value("TECHNICIAN"));
+        createStaffAccount(adminToken, "Security", "SECURITY")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.roles[0]").value("SECURITY"));
+    }
+
+    @Test
+    void staffApiRejectsAdminRoleDuplicateEmailAndNonAdmin() throws Exception {
+        String adminToken = loginToken("admin@test.com", DEVELOPMENT_PASSWORD);
+        String email = uniqueEmail("staff");
+
+        mockMvc.perform(post("/api/admin/users")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new StaffPayload(
+                                "Not Allowed", uniqueEmail("admin"), DEVELOPMENT_PASSWORD, "ADMIN"))))
+                .andExpect(status().isBadRequest());
+
+        createStaffAccount(adminToken, "Duplicate", "MANAGER", email)
+                .andExpect(status().isOk());
+        createStaffAccount(adminToken, "Duplicate Again", "MANAGER", email)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Email already exists"));
+
+        mockMvc.perform(post("/api/admin/users")
+                        .header("Authorization", "Bearer " + loginToken(RESIDENT_EMAIL, DEVELOPMENT_PASSWORD))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new StaffPayload(
+                                "Forbidden", uniqueEmail("forbidden"), DEVELOPMENT_PASSWORD, "MANAGER"))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void adminCanDeactivateStaffAndPreviouslyIssuedJwtIsRejected() throws Exception {
+        String adminToken = loginToken("admin@test.com", DEVELOPMENT_PASSWORD);
+        String email = uniqueEmail("technician");
+        String response = createStaffAccount(adminToken, "Temporary Technician", "TECHNICIAN", email)
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        Long userId = objectMapper.readTree(response).get("userId").asLong();
+        String oldToken = loginToken(email, DEVELOPMENT_PASSWORD);
+
+        mockMvc.perform(patch("/api/admin/users/{userId}/active", userId)
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"active\":false}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.active").value(false));
+
+        mockMvc.perform(loginRequest(email, DEVELOPMENT_PASSWORD))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(get("/api/auth/me").header("Authorization", "Bearer " + oldToken))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void onlyAdminCanListStaffAccountsAndTheListDoesNotExposeAdministrators() throws Exception {
+        String adminToken = loginToken("admin@test.com", DEVELOPMENT_PASSWORD);
+        String body = mockMvc.perform(get("/api/admin/users")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].password").doesNotExist())
+                .andReturn().getResponse().getContentAsString();
+        assertFalse(body.contains("\"ADMIN\""));
+
+        mockMvc.perform(get("/api/admin/users")
+                        .header("Authorization", "Bearer " + loginToken(RESIDENT_EMAIL, DEVELOPMENT_PASSWORD)))
+                .andExpect(status().isForbidden());
+    }
+
     private org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder loginRequest(
             String email,
             String password) throws Exception {
@@ -223,6 +305,27 @@ class IdentityAuthenticationIntegrationTests {
         return json.get("accessToken").asText();
     }
 
+    private org.springframework.test.web.servlet.ResultActions createStaffAccount(
+            String adminToken, String name, String role) throws Exception {
+        return createStaffAccount(adminToken, name, role, uniqueEmail(role.toLowerCase()));
+    }
+
+    private org.springframework.test.web.servlet.ResultActions createStaffAccount(
+            String adminToken, String name, String role, String email) throws Exception {
+        return mockMvc.perform(post("/api/admin/users")
+                .header("Authorization", "Bearer " + adminToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new StaffPayload(
+                        name, email, DEVELOPMENT_PASSWORD, role))));
+    }
+
+    private String uniqueEmail(String prefix) {
+        return prefix + "+" + UUID.randomUUID() + "@test.com";
+    }
+
     private record LoginPayload(String email, String password) {
+    }
+
+    private record StaffPayload(String fullName, String email, String initialPassword, String role) {
     }
 }

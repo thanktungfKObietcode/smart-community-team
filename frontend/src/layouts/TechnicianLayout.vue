@@ -1,4 +1,8 @@
 <script setup>
 import PortalLayout from './PortalLayout.vue'
-const items = [{ label: 'Tổng quan', icon: 'pi pi-home', to: '/technician/dashboard' }, { label: 'Công việc của tôi', icon: 'pi pi-wrench', to: '/technician/tasks' }]
-</script><template><PortalLayout portal="Cổng kỹ thuật" :items="items" /></template>
+const items = [
+  { label: 'Công việc của tôi', icon: 'pi pi-wrench', to: '/technician/tasks' },
+  { label: 'Tổng quan công việc', icon: 'pi pi-chart-bar', to: '/technician/dashboard' }
+]
+</script>
+<template><PortalLayout portal="Cổng kỹ thuật" :items="items" /></template>

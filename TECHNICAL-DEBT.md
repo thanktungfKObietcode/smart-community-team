@@ -6,3 +6,4 @@
 - Replace runtime schema compatibility changes with Flyway migrations before production deployment.
 - The automated test profile uses a disposable `create-drop` schema in `smartcommunity_test`; the development database remains non-destructive (`ddl-auto=update`).
 - `scripts/reset-dev-data.sql` is an explicit, guarded development-data reset for manual demos and must not be used as application startup logic.
+- Bootstrap ADMIN fallback credentials are development-only. Production deployment must provide `APP_BOOTSTRAP_ADMIN_*` values through a secret-management mechanism.

@@ -84,7 +84,7 @@ class Sprint2IntegrationTests {
     @Test
     void residentCanCreateConfirmedBookingAndReceivesNotification() throws Exception {
         Long facilityId = createFacility("BOOK");
-        LocalDateTime start = LocalDateTime.now().plusHours(1);
+        LocalDateTime start = futureBookingStart();
         String response = mockMvc.perform(post("/api/bookings")
                         .header("Authorization", "Bearer " + token("resident@test.com"))
                         .contentType(MediaType.APPLICATION_JSON).content(bookingJson(facilityId, start, start.plusHours(1))))
@@ -101,7 +101,7 @@ class Sprint2IntegrationTests {
     @Test
     void overlapIsRejectedButAdjacentBookingIsAllowed() throws Exception {
         Long facilityId = createFacility("OVERLAP");
-        LocalDateTime start = LocalDateTime.now().plusHours(2);
+        LocalDateTime start = futureBookingStart();
         createBooking(facilityId, start, start.plusHours(1));
         mockMvc.perform(post("/api/bookings").header("Authorization", "Bearer " + token("resident@test.com"))
                         .contentType(MediaType.APPLICATION_JSON).content(bookingJson(facilityId, start.plusMinutes(30), start.plusHours(2))))
@@ -118,7 +118,7 @@ class Sprint2IntegrationTests {
                         .header("Authorization", "Bearer " + token("manager@test.com"))
                         .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"MAINTENANCE\"}"))
                 .andExpect(status().isOk());
-        LocalDateTime start = LocalDateTime.now().plusHours(1);
+        LocalDateTime start = futureBookingStart();
         mockMvc.perform(post("/api/bookings").header("Authorization", "Bearer " + token("resident@test.com"))
                         .contentType(MediaType.APPLICATION_JSON).content(bookingJson(facilityId, start, start.plusHours(1))))
                 .andExpect(status().isConflict());
@@ -127,7 +127,7 @@ class Sprint2IntegrationTests {
     @Test
     void bookingDoesNotTrustResidentIdFromRequest() throws Exception {
         Long facilityId = createFacility("SCALAR");
-        LocalDateTime start = LocalDateTime.now().plusHours(2);
+        LocalDateTime start = futureBookingStart();
         String response = mockMvc.perform(post("/api/bookings")
                         .header("Authorization", "Bearer " + token("resident@test.com"))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -139,7 +139,7 @@ class Sprint2IntegrationTests {
     @Test
     void residentOwnBookingCancellationWorks() throws Exception {
         Long facilityId = createFacility("CANCEL");
-        LocalDateTime start = LocalDateTime.now().plusHours(3);
+        LocalDateTime start = futureBookingStart();
         JsonNode booking = objectMapper.readTree(createBooking(facilityId, start, start.plusHours(1)));
         mockMvc.perform(patch("/api/bookings/{id}/cancel", booking.get("id").asLong())
                         .header("Authorization", "Bearer " + token("resident@test.com")))
@@ -260,6 +260,10 @@ class Sprint2IntegrationTests {
 
     private String bookingJson(Long facilityId, LocalDateTime start, LocalDateTime end) throws Exception {
         return json(Map.of("facilityId", facilityId, "startTime", start, "endTime", end));
+    }
+
+    private LocalDateTime futureBookingStart() {
+        return LocalDateTime.now().plusDays(1).withHour(10).withMinute(0).withSecond(0).withNano(0);
     }
 
     private String token(String email) throws Exception {

@@ -13,6 +13,13 @@ import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.DelegatingOAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.core.OAuth2TokenValidatorResult;
+import org.springframework.security.oauth2.jwt.Jwt;
+
+import vn.edu.crs.smartcommunity.identity.api.IdentityLookup;
 
 @Configuration
 @EnableConfigurationProperties(JwtProperties.class)
@@ -35,11 +42,23 @@ public class JwtConfig {
     }
 
     @Bean
-    public JwtDecoder jwtDecoder(SecretKey jwtSecretKey) {
+    public JwtDecoder jwtDecoder(SecretKey jwtSecretKey, IdentityLookup identityLookup) {
         NimbusJwtDecoder decoder = NimbusJwtDecoder.withSecretKey(jwtSecretKey)
                 .macAlgorithm(MacAlgorithm.HS256)
                 .build();
-        decoder.setJwtValidator(JwtValidators.createDefault());
+        decoder.setJwtValidator(new DelegatingOAuth2TokenValidator<>(
+                JwtValidators.createDefault(), activeAccountValidator(identityLookup)));
         return decoder;
+    }
+
+    private OAuth2TokenValidator<Jwt> activeAccountValidator(IdentityLookup identityLookup) {
+        return jwt -> {
+            Number userId = jwt.getClaim("userId");
+            if (userId == null || !identityLookup.isUserActive(userId.longValue())) {
+                return OAuth2TokenValidatorResult.failure(
+                        new OAuth2Error("invalid_token", "Account is inactive", null));
+            }
+            return OAuth2TokenValidatorResult.success();
+        };
     }
 }

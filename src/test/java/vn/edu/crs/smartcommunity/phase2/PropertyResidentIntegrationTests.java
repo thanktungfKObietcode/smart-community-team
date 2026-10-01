@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
+import java.util.Map;
 import java.util.stream.Stream;
 
 import tools.jackson.databind.JsonNode;
@@ -197,6 +198,48 @@ class PropertyResidentIntegrationTests {
     }
 
     @Test
+    void managerCreatesResidentWithAnIdentityAccountAndSelectedApartment() throws Exception {
+        String email = uniqueEmail("resident-workflow");
+
+        String response = mockMvc.perform(post("/api/management/residents")
+                        .header("Authorization", "Bearer " + managerToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(newResidentJson(email, demoApartmentId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fullName").value("Resident Workflow"))
+                .andExpect(jsonPath("$.email").value(email))
+                .andExpect(jsonPath("$.apartment.id").value(demoApartmentId()))
+                .andReturn().getResponse().getContentAsString();
+
+        Long userId = objectMapper.readTree(response).get("userId").asLong();
+        assertTrue(identityLookup.getUserById(userId).orElseThrow().roles().contains("RESIDENT"));
+        assertTrue(residentRepository.findByUserId(userId).isPresent());
+    }
+
+    @Test
+    void invalidApartmentDoesNotCreateAnOrphanResidentAccount() throws Exception {
+        String email = uniqueEmail("missing-apartment");
+
+        mockMvc.perform(post("/api/management/residents")
+                        .header("Authorization", "Bearer " + managerToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(newResidentJson(email, Long.MAX_VALUE)))
+                .andExpect(status().isNotFound());
+
+        assertTrue(identityLookup.getUserByEmail(email).isEmpty());
+    }
+
+    @Test
+    void residentWorkflowRejectsDuplicateEmail() throws Exception {
+        mockMvc.perform(post("/api/management/residents")
+                        .header("Authorization", "Bearer " + managerToken())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(newResidentJson("resident@test.com", demoApartmentId())))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Email already exists"));
+    }
+
+    @Test
     void residentModuleDoesNotAccessIdentityOrPropertyInternalRepositories() throws Exception {
         String source = readResidentInternalSource();
         assertFalse(source.contains("identity.internal.repository"));
@@ -259,6 +302,20 @@ class PropertyResidentIntegrationTests {
     private String residentJson(Long userId, Long apartmentId, String residentType) throws Exception {
         return objectMapper.writeValueAsString(
                 new ResidentPayload(userId, apartmentId, residentType, "0912345678", null));
+    }
+
+    private String newResidentJson(String email, Long apartmentId) throws Exception {
+        return objectMapper.writeValueAsString(Map.of(
+                "fullName", "Resident Workflow",
+                "email", email,
+                "initialPassword", "123456",
+                "apartmentId", apartmentId,
+                "residentType", "OWNER",
+                "phone", "0912345678"));
+    }
+
+    private String uniqueEmail(String prefix) {
+        return prefix + "+" + UUID.randomUUID() + "@test.com";
     }
 
     private String uniqueCode(String prefix) {

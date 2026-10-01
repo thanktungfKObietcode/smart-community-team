@@ -1,6 +1,7 @@
 package vn.edu.crs.smartcommunity.booking.internal.controller;
 
 import java.util.List;
+import java.time.LocalDate;
 
 import jakarta.validation.Valid;
 
@@ -13,10 +14,12 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import vn.edu.crs.smartcommunity.booking.internal.dto.BookingResponse;
 import vn.edu.crs.smartcommunity.booking.internal.dto.CreateBookingRequest;
+import vn.edu.crs.smartcommunity.booking.internal.dto.BookingTimeSlot;
 import vn.edu.crs.smartcommunity.booking.internal.service.BookingService;
 
 @RestController
@@ -37,6 +40,11 @@ public class BookingController {
     @GetMapping("/my")
     public List<BookingResponse> my(@AuthenticationPrincipal Jwt jwt) {
         return bookingService.listMine(userId(jwt));
+    }
+
+    @GetMapping("/facilities/{facilityId}/availability")
+    public List<BookingTimeSlot> availability(@PathVariable Long facilityId, @RequestParam LocalDate date) {
+        return bookingService.confirmedSlots(facilityId, date);
     }
 
     @GetMapping("/{id}")

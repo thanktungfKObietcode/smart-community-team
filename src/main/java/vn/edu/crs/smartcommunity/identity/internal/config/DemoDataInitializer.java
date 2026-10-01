@@ -16,7 +16,7 @@ import vn.edu.crs.smartcommunity.identity.internal.repository.RoleRepository;
 import vn.edu.crs.smartcommunity.identity.internal.repository.UserRepository;
 
 @Component
-@Order(0)
+@Order(20)
 @ConditionalOnProperty(prefix = "app.demo-data", name = "enabled", havingValue = "true")
 public class DemoDataInitializer implements CommandLineRunner {
 

@@ -3,6 +3,8 @@ package vn.edu.crs.smartcommunity.facility.internal.entity;
 import java.time.Instant;
 import java.time.LocalTime;
 import java.util.Locale;
+import java.util.ArrayList;
+import java.util.List;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -11,6 +13,9 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -46,6 +51,20 @@ public class Facility {
 
     @Column(name = "building_id")
     private Long buildingId;
+
+    @Column(length = 180)
+    private String location;
+
+    @Column
+    private Integer capacity;
+
+    @Column(name = "cover_image_url", length = 500)
+    private String coverImageUrl;
+
+    @ElementCollection
+    @CollectionTable(name = "facility_images", joinColumns = @JoinColumn(name = "facility_id"))
+    @Column(name = "image_url", nullable = false, length = 500)
+    private List<String> galleryImageUrls = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 30)

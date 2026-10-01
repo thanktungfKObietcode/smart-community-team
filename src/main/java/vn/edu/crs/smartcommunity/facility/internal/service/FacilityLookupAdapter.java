@@ -23,6 +23,7 @@ public class FacilityLookupAdapter implements FacilityLookup {
     public Optional<FacilityInfo> getFacility(Long facilityId) {
         return facilityRepository.findById(facilityId).map(facility -> new FacilityInfo(
                 facility.getId(), facility.getCode(), facility.getName(), facility.getBuildingId(),
+                facility.getLocation(), facility.getCapacity(),
                 facility.getStatus(), facility.isBookable(), facility.getOpeningTime(),
                 facility.getClosingTime(), facility.isActive()));
     }

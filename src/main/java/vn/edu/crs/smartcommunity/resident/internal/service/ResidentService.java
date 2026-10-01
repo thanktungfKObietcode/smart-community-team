@@ -6,9 +6,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import vn.edu.crs.smartcommunity.common.error.ConflictException;
+import vn.edu.crs.smartcommunity.common.error.BadRequestException;
 import vn.edu.crs.smartcommunity.common.error.NotFoundException;
+import vn.edu.crs.smartcommunity.identity.api.IdentityAccountProvisioning;
 import vn.edu.crs.smartcommunity.identity.api.IdentityLookup;
 import vn.edu.crs.smartcommunity.identity.api.IdentityUserInfo;
+import vn.edu.crs.smartcommunity.identity.api.ResidentAccountCommand;
 import vn.edu.crs.smartcommunity.property.api.ApartmentInfo;
 import vn.edu.crs.smartcommunity.property.api.PropertyLookup;
 import vn.edu.crs.smartcommunity.resident.internal.dto.CreateResidentRequest;
@@ -21,29 +24,32 @@ public class ResidentService {
 
     private final ResidentRepository residentRepository;
     private final IdentityLookup identityLookup;
+    private final IdentityAccountProvisioning identityAccountProvisioning;
     private final PropertyLookup propertyLookup;
 
     public ResidentService(
             ResidentRepository residentRepository,
             IdentityLookup identityLookup,
+            IdentityAccountProvisioning identityAccountProvisioning,
             PropertyLookup propertyLookup) {
         this.residentRepository = residentRepository;
         this.identityLookup = identityLookup;
+        this.identityAccountProvisioning = identityAccountProvisioning;
         this.propertyLookup = propertyLookup;
     }
 
     @Transactional
     public ResidentResponse createResident(CreateResidentRequest request) {
-        if (residentRepository.existsByUserId(request.userId())) {
-            throw new ConflictException("Resident profile already exists");
-        }
-
-        IdentityUserInfo user = identityLookup.getUserById(request.userId())
-                .orElseThrow(() -> new NotFoundException("Identity user not found"));
-        validateUser(user);
-
         ApartmentInfo apartment = propertyLookup.getApartment(request.apartmentId())
                 .orElseThrow(() -> new NotFoundException("Apartment not found or inactive"));
+
+        IdentityUserInfo user = request.userId() == null
+                ? createResidentIdentity(request)
+                : resolveExistingResidentIdentity(request);
+
+        if (residentRepository.existsByUserId(user.userId())) {
+            throw new ConflictException("Resident profile already exists");
+        }
 
         Resident resident = new Resident();
         resident.setUserId(user.userId());
@@ -53,6 +59,27 @@ public class ResidentService {
         resident.setActive(true);
         resident.setMoveInDate(request.moveInDate());
         return toResponse(residentRepository.saveAndFlush(resident), user, apartment);
+    }
+
+    private IdentityUserInfo createResidentIdentity(CreateResidentRequest request) {
+        if (isBlank(request.fullName()) || isBlank(request.email()) || isBlank(request.initialPassword())) {
+            throw new BadRequestException("Full name, email and initial password are required for a new resident");
+        }
+        if (identityLookup.getUserByEmail(request.email()).isPresent()) {
+            throw new ConflictException("Email already exists");
+        }
+        return identityAccountProvisioning.createResidentAccount(new ResidentAccountCommand(
+                request.fullName(), request.email(), request.initialPassword()));
+    }
+
+    private IdentityUserInfo resolveExistingResidentIdentity(CreateResidentRequest request) {
+        if (!isBlank(request.fullName()) || !isBlank(request.email()) || !isBlank(request.initialPassword())) {
+            throw new BadRequestException("Use either an existing userId or new resident account details, not both");
+        }
+        IdentityUserInfo user = identityLookup.getUserById(request.userId())
+                .orElseThrow(() -> new NotFoundException("Identity user not found"));
+        validateUser(user);
+        return user;
     }
 
     @Transactional(readOnly = true)
@@ -104,5 +131,9 @@ public class ResidentService {
 
     private String normalizePhone(String phone) {
         return phone == null || phone.isBlank() ? null : phone.trim();
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 }

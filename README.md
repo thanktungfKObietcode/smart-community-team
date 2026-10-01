@@ -41,9 +41,29 @@ psql -h localhost -U postgres -d smartcommunity -f scripts/reset-dev-data.sql
 .\mvnw.cmd spring-boot:run
 ```
 
-The script refuses to run against any database other than `smartcommunity`, preserves the schema, and removes application data so the idempotent demo initializers can recreate the small baseline. It is intentionally never run during normal startup.
+The script refuses to run against any database other than `smartcommunity`, preserves the schema, and removes application data. It is intentionally never run during normal startup.
 
-## Demo accounts
+## Account lifecycle and demo mode
+
+By default, `app.demo-data.enabled=false`; normal startup does not create demo Manager, Resident, Technician, or Security accounts. It only ensures the configured bootstrap ADMIN exists. Override bootstrap values outside development with:
+
+```powershell
+$env:APP_BOOTSTRAP_ADMIN_EMAIL = 'admin@your-community.example'
+$env:APP_BOOTSTRAP_ADMIN_INITIAL_PASSWORD = 'a-strong-initial-password'
+```
+
+The bootstrap initializer is idempotent and never resets an existing password. The fallback credentials in `application.properties` are development-only and must not be used for deployment.
+
+To enable the small local demonstration dataset, set the feature flag before starting the backend:
+
+```powershell
+$env:APP_DEMO_DATA_ENABLED = 'true'
+.\mvnw.cmd spring-boot:run
+```
+
+Set `VITE_SHOW_DEMO_ACCOUNTS=true` in `frontend/.env.local` only when the frontend should display the demo-account hint. See `frontend/.env.example`.
+
+When demo mode is enabled, these accounts use password `123456`:
 
 All development demo accounts use password `123456`:
 
@@ -56,6 +76,8 @@ All development demo accounts use password `123456`:
 | Administrator | `admin@test.com` | `/manager/dashboard` |
 
 Start at `http://localhost:5173/login`; the app redirects each role to its portal after successful authentication.
+
+In normal operation, ADMIN creates MANAGER, TECHNICIAN, and SECURITY accounts at `/manager/accounts`. ADMIN or MANAGER adds a Resident from `/manager/residents`; that workflow creates the RESIDENT identity account and Resident profile atomically after an apartment is selected.
 
 ## Final architecture and demo flow
 
