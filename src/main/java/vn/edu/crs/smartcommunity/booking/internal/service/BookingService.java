@@ -2,6 +2,7 @@ package vn.edu.crs.smartcommunity.booking.internal.service;
 
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
@@ -13,6 +14,7 @@ import vn.edu.crs.smartcommunity.booking.api.BookingCancelledEvent;
 import vn.edu.crs.smartcommunity.booking.api.BookingConfirmedEvent;
 import vn.edu.crs.smartcommunity.booking.internal.dto.BookingResponse;
 import vn.edu.crs.smartcommunity.booking.internal.dto.CreateBookingRequest;
+import vn.edu.crs.smartcommunity.booking.internal.dto.BookingTimeSlot;
 import vn.edu.crs.smartcommunity.booking.internal.entity.Booking;
 import vn.edu.crs.smartcommunity.booking.internal.entity.BookingStatus;
 import vn.edu.crs.smartcommunity.booking.internal.repository.BookingRepository;
@@ -73,6 +75,17 @@ public class BookingService {
                 .orElseThrow(() -> new NotFoundException("Resident profile not found"));
         return bookingRepository.findByResidentIdOrderByStartTimeDesc(resident.residentId()).stream()
                 .map(booking -> toResponse(booking, facilityName(booking.getFacilityId()))).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<BookingTimeSlot> confirmedSlots(Long facilityId, LocalDate date) {
+        FacilityInfo facility = facilityLookup.getFacility(facilityId)
+                .orElseThrow(() -> new NotFoundException("Facility not found"));
+        LocalDateTime start = date.atStartOfDay();
+        return bookingRepository
+                .findByFacilityIdAndStatusAndStartTimeGreaterThanEqualAndStartTimeLessThanOrderByStartTimeAsc(
+                        facility.id(), BookingStatus.CONFIRMED, start, start.plusDays(1))
+                .stream().map(booking -> new BookingTimeSlot(booking.getStartTime(), booking.getEndTime())).toList();
     }
 
     @Transactional(readOnly = true)
