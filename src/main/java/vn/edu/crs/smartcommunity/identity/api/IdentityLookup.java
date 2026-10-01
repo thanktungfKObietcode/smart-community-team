@@ -11,5 +11,7 @@ public interface IdentityLookup {
 
     boolean userExists(Long userId);
 
+    boolean isUserActive(Long userId);
+
     List<IdentityUserInfo> findActiveTechnicians();
 }
