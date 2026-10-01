@@ -39,6 +39,11 @@ public class IdentityLookupAdapter implements IdentityLookup {
     }
 
     @Override
+    public boolean isUserActive(Long userId) {
+        return userRepository.findById(userId).map(User::isActive).orElse(false);
+    }
+
+    @Override
     public List<IdentityUserInfo> findActiveTechnicians() {
         return userRepository.findByActiveTrueAndRoles_NameOrderByFullNameAsc(RoleName.TECHNICIAN)
                 .stream()
